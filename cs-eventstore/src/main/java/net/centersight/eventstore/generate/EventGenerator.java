@@ -4,7 +4,6 @@ import net.centersight.eventstore.generate.util.Pool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.glassfish.jersey.client.ClientConfig;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -15,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.client.Client;
@@ -54,14 +53,19 @@ public class EventGenerator {
 
 	private Map<String, PanamaEventDto> history = new HashMap<>();
 
-	Queue<PanamaEventDto> queue = new ArrayBlockingQueue<>(100);
+	Queue<PanamaEventDto> queue = new ConcurrentLinkedQueue<>();
 
 
 	private WebTarget service1;
 
 	private WebTarget service2;
 
-	public EventGenerator(RestTemplateBuilder restTemplateBuilder) {
+	private Thread filler;
+
+	private Thread consumer;
+
+
+	public EventGenerator() {
 		new FillQueue(queue);
 		new ConsumeQueue(queue);
 
@@ -74,14 +78,24 @@ public class EventGenerator {
 
 	public void start() {
 		FillQueue fillQueue = new FillQueue(queue);
-		new Thread(fillQueue).start();
+		filler = new Thread(fillQueue);
+		filler.start();
 		try {
 			TimeUnit.SECONDS.sleep(4);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		ConsumeQueue consumeQueue = new ConsumeQueue(queue);
-		new Thread(consumeQueue).start();
+		consumer = new Thread(consumeQueue);
+		consumer.start();
+	}
+
+	public void stop() {
+		if (filler != null)
+			filler.interrupt();
+		if (consumer != null)
+			consumer.interrupt();
+
 	}
 
 	public PanamaEventDto createNextNext() {
@@ -131,7 +145,7 @@ public class EventGenerator {
 		@Override
 		public void run() {
 			try {
-				while (true) {
+				while (!Thread.interrupted()) {
 					PanamaEventDto event = createNextNext();
 					q.add(event);
 					System.out.println(event.toString());
@@ -161,26 +175,30 @@ public class EventGenerator {
 		@Override
 		public void run() {
 			try {
-				while ((list.size() < MAXLOAD)) {
+				while (!Thread.interrupted() && (list.size() < MAXLOAD)) {
 					TimeUnit.MILLISECONDS.sleep(100);
 					getAndSetNextEvent();
 				}
-				while (true) {
+				while (!Thread.interrupted() || !list.isEmpty()) {
 					PanamaEventDto event = getAndSetNextEvent();
-					TimeUnit.SECONDS.sleep(1);
+					TimeUnit.MILLISECONDS.sleep(800);
 					PanamaEventDto e = list.remove(random.nextInt(list.size()));
-					event.setIsCome(false);
-					System.out.println(e.toString());
-					send(e);
+					if (event != null) {
+						event.setIsCome(false);
+						System.out.println(e.toString());
+						send(e);
+					}
 				}
 			} catch (InterruptedException e) {
+				System.out.println("Remained: " + list.size());
 				e.printStackTrace();
 			}
 		}
 
 		private PanamaEventDto getAndSetNextEvent() {
 			PanamaEventDto event = q.poll();
-			list.add(event);
+			if (event != null)
+				list.add(event);
 			return event;
 		}
 

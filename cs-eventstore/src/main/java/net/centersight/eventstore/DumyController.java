@@ -29,6 +29,12 @@ public class DumyController {
 
 	}
 
+	@RequestMapping("/stop")
+	public void stop() {
+		generator.stop();
+
+	}
+
 	@RequestMapping("/startHZJ")
 	public void startHz() {
 		JetInstance jet = Jet.newJetInstance();
