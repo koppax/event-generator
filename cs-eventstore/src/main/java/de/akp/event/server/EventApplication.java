@@ -1,4 +1,4 @@
-package net.centersight.eventstore;
+package de.akp.event.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

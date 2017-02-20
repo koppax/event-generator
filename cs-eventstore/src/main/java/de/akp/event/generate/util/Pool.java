@@ -1,4 +1,4 @@
-package net.centersight.eventstore.generate.util;
+package de.akp.event.generate.util;
 
 import java.util.Collections;
 import java.util.List;

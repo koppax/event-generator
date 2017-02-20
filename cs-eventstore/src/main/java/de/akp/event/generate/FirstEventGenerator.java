@@ -1,8 +1,9 @@
-package net.centersight.eventstore.generate;
-
-import net.centersight.eventstore.generate.util.Pool;
+package de.akp.event.generate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import de.akp.event.generate.util.Pool;
+
 import org.glassfish.jersey.client.ClientConfig;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,9 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.client.Client;
@@ -26,7 +30,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 @Service
-public class EventGenerator {
+public class FirstEventGenerator {
 
 	public enum Clients {
 		EINS(UriBuilder.fromUri("http://localhost:8090").build()),
@@ -53,7 +57,8 @@ public class EventGenerator {
 
 	private Map<String, PanamaEventDto> history = new HashMap<>();
 
-	Queue<PanamaEventDto> queue = new ConcurrentLinkedQueue<>();
+	Queue<PanamaEventDto> createQueue = new ConcurrentLinkedQueue<>();
+	Queue<PanamaEventDto> sendQueue = new ConcurrentLinkedQueue<>();
 
 
 	private WebTarget service1;
@@ -65,9 +70,9 @@ public class EventGenerator {
 	private Thread consumer;
 
 
-	public EventGenerator() {
-		new FillQueue(queue);
-		new ConsumeQueue(queue);
+	public FirstEventGenerator() {
+		new FillQueue(createQueue);
+		new ConsumeQueue(createQueue);
 
 		ClientConfig config = new ClientConfig();
 		Client client = ClientBuilder.newClient(config);
@@ -77,7 +82,7 @@ public class EventGenerator {
 	}
 
 	public void start() {
-		FillQueue fillQueue = new FillQueue(queue);
+		FillQueue fillQueue = new FillQueue(createQueue);
 		filler = new Thread(fillQueue);
 		filler.start();
 		try {
@@ -85,7 +90,7 @@ public class EventGenerator {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		ConsumeQueue consumeQueue = new ConsumeQueue(queue);
+		ConsumeQueue consumeQueue = new ConsumeQueue(createQueue);
 		consumer = new Thread(consumeQueue);
 		consumer.start();
 	}
@@ -95,10 +100,14 @@ public class EventGenerator {
 			filler.interrupt();
 		if (consumer != null)
 			consumer.interrupt();
-
+	}
+	
+	public PanamaEventDto getNext() {
+		PanamaEventDto e = sendQueue.poll();
+		return e;
 	}
 
-	public PanamaEventDto createNextNext() {
+	private PanamaEventDto createNextNext() {
 		String id = Integer.toString(random.nextInt());
 		PanamaEventDto event = new PanamaEventDto(id, nodes.getNext(), gateways.getNext(), priority.getNext(), true, "test");
 		history.put(id, event);
@@ -106,14 +115,10 @@ public class EventGenerator {
 	}
 
 	private void send(PanamaEventDto event) {
-		if (event.getParentId() % (long) 2 == 0) {
-			sendToClient(event, service1);
-		} else {
-			sendToClient(event, service2);
-		}
+		sendQueue.offer(event);
 	}
 
-	public String sendToClient(PanamaEventDto event, WebTarget service) {
+	private String sendToClient(PanamaEventDto event, WebTarget service) {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			String jsonInString = mapper.writeValueAsString(event);
@@ -128,12 +133,6 @@ public class EventGenerator {
 
 	}
 
-
-	// private URI getBaseURI() {
-	// return UriBuilder.fromUri("http://localhost:8090").build();
-	// }
-
-
 	private class FillQueue implements Runnable {
 
 		private Queue<PanamaEventDto> q;
@@ -145,7 +144,7 @@ public class EventGenerator {
 		@Override
 		public void run() {
 			try {
-				while (!Thread.interrupted()) {
+				while (!Thread.currentThread().isInterrupted()) {
 					PanamaEventDto event = createNextNext();
 					q.add(event);
 					System.out.println(event.toString());
@@ -153,6 +152,7 @@ public class EventGenerator {
 					TimeUnit.SECONDS.sleep(1);
 				}
 			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 				e.printStackTrace();
 			}
 		}
@@ -175,22 +175,23 @@ public class EventGenerator {
 		@Override
 		public void run() {
 			try {
-				while (!Thread.interrupted() && (list.size() < MAXLOAD)) {
+				while (!Thread.currentThread().isInterrupted() && (list.size() < MAXLOAD)) {
 					TimeUnit.MILLISECONDS.sleep(100);
 					getAndSetNextEvent();
 				}
-				while (!Thread.interrupted() || !list.isEmpty()) {
+				while (!Thread.currentThread().isInterrupted() || !list.isEmpty()) {
 					PanamaEventDto event = getAndSetNextEvent();
 					TimeUnit.MILLISECONDS.sleep(800);
 					PanamaEventDto e = list.remove(random.nextInt(list.size()));
-					if (event != null) {
-						event.setIsCome(false);
+					if (e != null) {
+						e.setIsCome(false);
 						System.out.println(e.toString());
 						send(e);
 					}
 				}
 			} catch (InterruptedException e) {
 				System.out.println("Remained: " + list.size());
+				Thread.currentThread().interrupt();
 				e.printStackTrace();
 			}
 		}

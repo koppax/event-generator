@@ -1,4 +1,4 @@
-package net.centersight.eventstore.generate;
+package de.akp.event.generate;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
