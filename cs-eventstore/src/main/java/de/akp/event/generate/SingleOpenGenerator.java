@@ -6,6 +6,10 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
+
 public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 	
 	protected List<T> openList = new ArrayList<>();
@@ -17,6 +21,8 @@ public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 	private volatile boolean started = false;
 	protected long waitTime = 200;
 	protected IEventGenerator<T> generator;
+	
+	static final MetricRegistry metrics = new MetricRegistry();
 	
 	public SingleOpenGenerator(IEventGenerator<T> generator) {
 		this.generator = generator;
@@ -33,6 +39,14 @@ public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 
 	@Override
 	public void start() {
+		metrics.register(MetricRegistry.name(SingleOpenGenerator.class, "send"), new Gauge<Integer>() {
+			
+			@Override
+			public Integer getValue() {
+				return sendQueue.size();
+			}
+			
+		});
 		producerThread = new Thread(producer);
 		producerThread.start();
 		started = true;
@@ -49,6 +63,14 @@ public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 		openList.add(toBeSent);
 		return toBeSent;
 	}
+	
+	public static void startReport() {
+	      ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics)
+	          .convertRatesTo(TimeUnit.SECONDS)
+	          .convertDurationsTo(TimeUnit.MILLISECONDS)
+	          .build();
+	      reporter.start(1, TimeUnit.SECONDS);
+	  }
 	
 	
 	private class EventProducer implements Runnable {

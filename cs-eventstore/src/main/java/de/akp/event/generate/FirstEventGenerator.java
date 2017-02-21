@@ -1,12 +1,5 @@
 package de.akp.event.generate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import de.akp.event.generate.util.Pool;
-
-import org.glassfish.jersey.client.ClientConfig;
-import org.springframework.stereotype.Service;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,9 +9,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.client.Client;
@@ -28,6 +18,20 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
+
+import org.glassfish.jersey.client.ClientConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Metric;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yammer.metrics.core.MetricsRegistry;
+
+import de.akp.event.generate.util.Pool;
 
 @Service
 public class FirstEventGenerator {
@@ -68,7 +72,10 @@ public class FirstEventGenerator {
 	private Thread filler;
 
 	private Thread consumer;
-
+	
+	@Autowired
+	MetricRegistry metrics;
+	
 
 	public FirstEventGenerator() {
 		new FillQueue(createQueue);
@@ -78,10 +85,20 @@ public class FirstEventGenerator {
 		Client client = ClientBuilder.newClient(config);
 		service1 = client.target(Clients.EINS.uri);
 		service2 = client.target(Clients.ZWEI.uri);
+		
 
 	}
 
+	
 	public void start() {
+		metrics.register(MetricRegistry.name(FirstEventGenerator.class, "send"), new Gauge<Integer>() {
+			
+			@Override
+			public Integer getValue() {
+				return sendQueue.size();
+			}
+			
+		});
 		FillQueue fillQueue = new FillQueue(createQueue);
 		filler = new Thread(fillQueue);
 		filler.start();
@@ -102,10 +119,18 @@ public class FirstEventGenerator {
 			consumer.interrupt();
 	}
 	
-	public PanamaEventDto getNext() {
-		PanamaEventDto e = sendQueue.poll();
-		return e;
-	}
+//	public PanamaEventDto getNext() {
+//		metrics.register(MetricRegistry.name(FirstEventGenerator.class, "versuch"), new Gauge<Integer>() {
+//
+//			@Override
+//			public Integer getValue() {
+//				return sendQueue.size();
+//			}
+//			
+//		});
+//		PanamaEventDto e = sendQueue.poll();
+//		return e;
+//	}
 
 	private PanamaEventDto createNextNext() {
 		String id = Integer.toString(random.nextInt());
@@ -114,6 +139,7 @@ public class FirstEventGenerator {
 		return event;
 	}
 
+	@Timed
 	private void send(PanamaEventDto event) {
 		sendQueue.offer(event);
 	}

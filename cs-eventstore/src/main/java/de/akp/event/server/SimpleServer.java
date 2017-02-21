@@ -16,6 +16,7 @@ import de.akp.event.generate.Event;
 import de.akp.event.generate.EventPool;
 import de.akp.event.generate.IEventGenerator;
 import de.akp.event.generate.OpenCloseEvent;
+import de.akp.event.generate.SingleOpenGenerator;
 
 public class SimpleServer {
 
@@ -47,6 +48,7 @@ public class SimpleServer {
 		this.doRun = false;
 	}
 
+	// curl localhost:8082
 	public static void main(String[] args) {
 		SimpleServer simpleServer = new SimpleServer(8082, new OpenCloseEvent.EventGenerator(), 100);
 		simpleServer.centralLoop();
