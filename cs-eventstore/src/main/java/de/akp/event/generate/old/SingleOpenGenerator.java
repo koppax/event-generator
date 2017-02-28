@@ -1,4 +1,4 @@
-package de.akp.event.generate;
+package de.akp.event.generate.old;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +9,10 @@ import java.util.concurrent.TimeUnit;
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+
+import de.akp.event.generate.Event;
+import de.akp.event.generate.EventPool;
+import de.akp.event.generate.IEventGenerator;
 
 public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 	
@@ -59,7 +63,7 @@ public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 	
 	protected T toBeSent() {
 		T toBeSent = null;
-		toBeSent = generator.newEvent();
+//		toBeSent = generator.newEvent();
 		openList.add(toBeSent);
 		return toBeSent;
 	}
@@ -100,7 +104,7 @@ public class SingleOpenGenerator<T extends Event<?>> implements EventPool<T> {
 		}
 
 		private void init() {
-			openList.add(generator.newEvent());
+//			openList.add(generator.newEvent());
 		}
 		
 		

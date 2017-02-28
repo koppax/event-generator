@@ -2,11 +2,12 @@ package de.akp.event.generate;
 
 public interface IEventGenerator<T extends Event<?>> {
 	
-	public T newEvent();
+	public T nextEvent();
 	
 	public T newCorrelatedEvent(T event);
 	
-	public EventPool<T> getEmitter();
+	public void start();
 	
+	public void stop();
 
 }

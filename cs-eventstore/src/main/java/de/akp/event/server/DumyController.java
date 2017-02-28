@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.akp.event.generate.FirstEventGenerator;
-import de.akp.event.generate.OpenCloseEvent;
+import de.akp.event.generate.EmitterFactoryOpenClose;
+import de.akp.event.generate.old.FirstEventGenerator;
 
 @RestController
 public class DumyController {
@@ -38,7 +38,7 @@ public class DumyController {
 	@RequestMapping("/startServer")
 	public void startServer() {
 		if(server == null) {
-			server = new SimpleServer(8082, new OpenCloseEvent.EventGenerator(), 100);
+			server = new SimpleServer(8082, new EmitterFactoryOpenClose(), 100);
 		}
 		server.centralLoop();
 		

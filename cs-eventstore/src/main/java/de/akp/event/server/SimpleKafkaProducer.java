@@ -8,7 +8,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-import de.akp.event.generate.BasicEvent;
+import de.akp.event.generate.EmitterFactoryBasic;
 import de.akp.event.generate.IEventGenerator;
 
 public class SimpleKafkaProducer {
@@ -23,9 +23,10 @@ public class SimpleKafkaProducer {
         Producer<String, String> producer = new KafkaProducer<>(configProperties);
 
         String topicName = "test";
-        IEventGenerator<?> generator = new BasicEvent.EventGenerator();
+        IEventGenerator<?> generator = new EmitterFactoryBasic().createEmitter();
+        generator.start();
         IntStream.range(0,10)
-        	.mapToObj(i->generator.newEvent())
+        	.mapToObj(i->generator.nextEvent())
         	.forEach(e->producer
         			.send(new ProducerRecord<String, String>(topicName, e.toString())));
         

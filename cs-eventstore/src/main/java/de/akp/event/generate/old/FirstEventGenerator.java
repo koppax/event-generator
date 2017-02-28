@@ -1,4 +1,4 @@
-package de.akp.event.generate;
+package de.akp.event.generate.old;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -59,10 +59,10 @@ public class FirstEventGenerator {
 
 	private Pool<Long> gateways = new Pool<Long>(Arrays.asList(201L, 202L, 303L));
 
-	private Map<String, PanamaEventDto> history = new HashMap<>();
+	private Map<String, SomeEventDto> history = new HashMap<>();
 
-	Queue<PanamaEventDto> createQueue = new ConcurrentLinkedQueue<>();
-	Queue<PanamaEventDto> sendQueue = new ConcurrentLinkedQueue<>();
+	Queue<SomeEventDto> createQueue = new ConcurrentLinkedQueue<>();
+	Queue<SomeEventDto> sendQueue = new ConcurrentLinkedQueue<>();
 
 
 	private WebTarget service1;
@@ -132,19 +132,19 @@ public class FirstEventGenerator {
 //		return e;
 //	}
 
-	private PanamaEventDto createNextNext() {
+	private SomeEventDto createNextNext() {
 		String id = Integer.toString(random.nextInt());
-		PanamaEventDto event = new PanamaEventDto(id, nodes.getNext(), gateways.getNext(), priority.getNext(), true, "test");
+		SomeEventDto event = new SomeEventDto(id, nodes.getNext(), gateways.getNext(), priority.getNext(), true, "test");
 		history.put(id, event);
 		return event;
 	}
 
 	@Timed
-	private void send(PanamaEventDto event) {
+	private void send(SomeEventDto event) {
 		sendQueue.offer(event);
 	}
 
-	private String sendToClient(PanamaEventDto event, WebTarget service) {
+	private String sendToClient(SomeEventDto event, WebTarget service) {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			String jsonInString = mapper.writeValueAsString(event);
@@ -161,9 +161,9 @@ public class FirstEventGenerator {
 
 	private class FillQueue implements Runnable {
 
-		private Queue<PanamaEventDto> q;
+		private Queue<SomeEventDto> q;
 
-		public FillQueue(Queue<PanamaEventDto> q) {
+		public FillQueue(Queue<SomeEventDto> q) {
 			this.q = q;
 		}
 
@@ -171,7 +171,7 @@ public class FirstEventGenerator {
 		public void run() {
 			try {
 				while (!Thread.currentThread().isInterrupted()) {
-					PanamaEventDto event = createNextNext();
+					SomeEventDto event = createNextNext();
 					q.add(event);
 					System.out.println(event.toString());
 					send(event);
@@ -190,11 +190,11 @@ public class FirstEventGenerator {
 
 		private static final int MAXLOAD = 3;
 
-		private Queue<PanamaEventDto> q;
+		private Queue<SomeEventDto> q;
 
-		private List<PanamaEventDto> list = new ArrayList<>();
+		private List<SomeEventDto> list = new ArrayList<>();
 
-		public ConsumeQueue(Queue<PanamaEventDto> q) {
+		public ConsumeQueue(Queue<SomeEventDto> q) {
 			this.q = q;
 		}
 
@@ -206,9 +206,9 @@ public class FirstEventGenerator {
 					getAndSetNextEvent();
 				}
 				while (!Thread.currentThread().isInterrupted() || !list.isEmpty()) {
-					PanamaEventDto event = getAndSetNextEvent();
+					SomeEventDto event = getAndSetNextEvent();
 					TimeUnit.MILLISECONDS.sleep(800);
-					PanamaEventDto e = list.remove(random.nextInt(list.size()));
+					SomeEventDto e = list.remove(random.nextInt(list.size()));
 					if (e != null) {
 						e.setIsCome(false);
 						System.out.println(e.toString());
@@ -222,8 +222,8 @@ public class FirstEventGenerator {
 			}
 		}
 
-		private PanamaEventDto getAndSetNextEvent() {
-			PanamaEventDto event = q.poll();
+		private SomeEventDto getAndSetNextEvent() {
+			SomeEventDto event = q.poll();
 			if (event != null)
 				list.add(event);
 			return event;

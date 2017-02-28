@@ -12,11 +12,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import de.akp.event.generate.EmitterFactory;
+import de.akp.event.generate.EmitterFactoryBasic;
+import de.akp.event.generate.EmitterFactoryBasic.BasicEvent;
+import de.akp.event.generate.EmitterFactoryOpenClose;
 import de.akp.event.generate.Event;
-import de.akp.event.generate.EventPool;
 import de.akp.event.generate.IEventGenerator;
-import de.akp.event.generate.OpenCloseEvent;
-import de.akp.event.generate.SingleOpenGenerator;
 
 public class SimpleServer {
 
@@ -26,16 +27,27 @@ public class SimpleServer {
 	private volatile boolean doRun = true;
 
 	ExecutorService executor = Executors.newFixedThreadPool(10);
+	private EmitterFactory factory;
 
-	private IEventGenerator<?> generator;
+//	private IEventGenerator<?> generator;
+//	
+//	private Event<?> event;
 
-	public SimpleServer(int port, IEventGenerator<?> eventGenerator) {
-		this(port, eventGenerator, 0);
-	}
+//	public SimpleServer(int port, IEventGenerator<?> eventGenerator) {
+//		this(port, eventGenerator, 0);
+//	}
 
-	public SimpleServer(int port, IEventGenerator<?> eventGenerator, int waitMillis) {
+//	public SimpleServer(int port, IEventGenerator<?> eventGenerator, int waitMillis) {
+//		this.port = port;
+//		generator = eventGenerator;
+//		this.waitMillis = waitMillis;
+//	}
+	
+	public SimpleServer(int port, EmitterFactory factory, int waitMillis) {
 		this.port = port;
-		generator = eventGenerator;
+//		generator = eventGenerator;
+		this.factory = factory;
+		
 		this.waitMillis = waitMillis;
 	}
 
@@ -50,10 +62,10 @@ public class SimpleServer {
 
 	// curl localhost:8082
 	public static void main(String[] args) {
-		SimpleServer simpleServer = new SimpleServer(8082, new OpenCloseEvent.EventGenerator(), 100);
+		SimpleServer simpleServer = new SimpleServer(8082, new EmitterFactoryOpenClose(), 100);
 		simpleServer.centralLoop();
 		try {
-			TimeUnit.SECONDS.sleep(15);
+			TimeUnit.SECONDS.sleep(25);
 		} catch (InterruptedException e) {
 		}
 		simpleServer.shutDown();
@@ -67,15 +79,16 @@ public class SimpleServer {
 			Loop task = null;
 			try (ServerSocket server = new ServerSocket(port)) {
 				while (doRun) {
+					System.out.println("Start...");
 					try {
 						Socket connection = server.accept();
-						task = new Loop(connection);
+						System.out.println("accepted");
+						task = new Loop(connection, factory.createEmitter());
 						executor.submit(task);
 					} catch (IOException e) {
 					}
 				}
 				executor.shutdown();
-				executor.shutdownNow();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -87,20 +100,21 @@ public class SimpleServer {
 	private class Loop implements Callable<String> {
 
 		private Socket connection;
+		private IEventGenerator<? extends Event<?>> iEventGenerator;
 
-		public Loop(Socket connection) {
+		public Loop(Socket connection, IEventGenerator<? extends Event<?>> iEventGenerator) {
 			this.connection = connection;
+			this.iEventGenerator = iEventGenerator;
 		}
 
 		@Override
 		public String call() {
-			EventPool<?> emitter = generator.getEmitter();
-			emitter.start();
+			iEventGenerator.start();
 				try (Writer w = new BufferedWriter(
 						new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8))) {
 					Event<?> event = null;
 					while (!Thread.currentThread().isInterrupted()) {
-						event = emitter.getNext();
+						event = iEventGenerator.nextEvent();
 						if (event != null) {
 							w.write(event.toString());
 							w.write('\n');
@@ -115,8 +129,8 @@ public class SimpleServer {
 							}
 						}
 					}
-					emitter.stop();
-					while ((event = emitter.getNext()) != null) {
+					iEventGenerator.stop();
+					while ((event = iEventGenerator.nextEvent()) != null) {
 						w.write(event.toString());
 						w.write('\n');
 						w.flush();

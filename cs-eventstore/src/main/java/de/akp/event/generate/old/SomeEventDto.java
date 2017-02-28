@@ -1,4 +1,4 @@
-package de.akp.event.generate;
+package de.akp.event.generate.old;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
-public class PanamaEventDto {
+public class SomeEventDto {
 
 	public String eventId;
 
@@ -79,7 +79,7 @@ public class PanamaEventDto {
 	}
 
 	@JsonCreator
-	public PanamaEventDto(@JsonProperty("eventId")
+	public SomeEventDto(@JsonProperty("eventId")
 	String eventId, @JsonProperty("nodeId")
 	Long nodeId, @JsonProperty("gateWayId")
 	Long gateWayId,
@@ -95,7 +95,7 @@ public class PanamaEventDto {
 		this.payload = payload;
 	}
 
-	public PanamaEventDto() {
+	public SomeEventDto() {
 
 	}
 
