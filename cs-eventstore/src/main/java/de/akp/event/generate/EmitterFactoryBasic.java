@@ -54,7 +54,7 @@ public class EmitterFactoryBasic implements EmitterFactory {
 			if(!active) {
 				return null;
 			}
-			return new BasicEvent(UUID.randomUUID().toString(), "urururururururu");
+			return new BasicEvent(UUID.randomUUID().toString(), cp.getNext());
 		}
 
 		@Override
@@ -71,6 +71,11 @@ public class EmitterFactoryBasic implements EmitterFactory {
 		@Override
 		public void stop() {
 			active = false;
+		}
+
+		@Override
+		public Event<?> getNext() {
+			return nextEvent();
 		}
 	}
 

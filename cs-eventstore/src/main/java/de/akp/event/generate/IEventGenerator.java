@@ -1,6 +1,6 @@
 package de.akp.event.generate;
 
-public interface IEventGenerator<T extends Event<?>> {
+public interface IEventGenerator<T extends Event<?>> extends EventPool<Event<?>> {
 	
 	public T nextEvent();
 	

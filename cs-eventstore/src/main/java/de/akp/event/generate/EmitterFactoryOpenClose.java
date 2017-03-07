@@ -81,5 +81,10 @@ public class EmitterFactoryOpenClose implements EmitterFactory {
 		public void stop() {
 			active = false;
 		}
+
+		@Override
+		public Event<?> getNext() {
+			return nextEvent();
+		}
 	}
 }
