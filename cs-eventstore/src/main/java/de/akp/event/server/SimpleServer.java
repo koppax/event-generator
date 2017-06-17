@@ -96,31 +96,31 @@ public class SimpleServer {
 		public String call() {
 			EventPool<?> emitter = generator.getEmitter();
 			emitter.start();
-				try (Writer w = new BufferedWriter(
-						new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8))) {
-					Event<?> event = null;
-					while (!Thread.currentThread().isInterrupted()) {
-						event = emitter.getNext();
-						if (event != null) {
-							w.write(event.toString());
-							w.write('\n');
-							w.flush();
-							if(!doRun) break;
-						}
-						if (waitMillis > 0) {
-							try {
-								TimeUnit.MILLISECONDS.sleep(waitMillis);
-							} catch (InterruptedException e) {
-								Thread.currentThread().interrupt();
-							}
-						}
-					}
-					emitter.stop();
-					while ((event = emitter.getNext()) != null) {
+			try (Writer w = new BufferedWriter(
+					new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8))) {
+				Event<?> event = null;
+				while (!Thread.currentThread().isInterrupted()) {
+					event = emitter.getNext();
+					if (event != null) {
 						w.write(event.toString());
 						w.write('\n');
 						w.flush();
+						if(!doRun) break;
 					}
+					if (waitMillis > 0) {
+						try {
+							TimeUnit.MILLISECONDS.sleep(waitMillis);
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						}
+					}
+				}
+				emitter.stop();
+				while ((event = emitter.getNext()) != null) {
+					w.write(event.toString());
+					w.write('\n');
+					w.flush();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
